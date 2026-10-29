@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lump Sum Tax Planner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #FAFAFA; --surface: #FFFFFF; --ink: #1A1A2E; --muted: #5A5A7A; --line: #E0E0E8;
+  --accent: #6A1B4D; --accent-ink: #FFFFFF; --accent-soft: #F3E5F0;
+  --gold: #D4AF37; --coral: #E07A5F;
+  --warn-bg: #FFF4E5; --warn-ink: #8A5A00; --bad-bg: #FDE8E8; --bad-ink: #9B2C2C; --ok-bg: #E6F4EA; --ok-ink: #1E5631;
+  --mast: #2D1B36; --mast-ink: #F8F5FA;
+  --f-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --f-body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12121A; --surface: #1E1E2E; --ink: #E6E6F0; --muted: #9A9AB0; --line: #2E2E3E;
+    --accent: #D484B5; --accent-ink: #2D1B36; --accent-soft: #3A2030;
+    --gold: #E5C158; --coral: #F09A85;
+    --warn-bg: #3A2D0B; --warn-ink: #F3D58B; --bad-bg: #401A16; --bad-ink: #F6B8B0; --ok-bg: #16372F; --ok-ink: #9DE6D2;
+    --mast: #1A1020; --mast-ink: #F8F5FA; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12121A; --surface: #1E1E2E; --ink: #E6E6F0; --muted: #9A9AB0; --line: #2E2E3E;
+  --accent: #D484B5; --accent-ink: #2D1B36; --accent-soft: #3A2030;
+  --gold: #E5C158; --coral: #F09A85;
+  --warn-bg: #3A2D0B; --warn-ink: #F3D58B; --bad-bg: #401A16; --bad-ink: #F6B8B0; --ok-bg: #16372F; --ok-ink: #9DE6D2;
+  --mast: #1A1020; --mast-ink: #F8F5FA; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--f-body); margin: 0; padding: 0; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.15; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+a { color: var(--accent); }
+.wrap { max-width: 800px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.mast { background: var(--mast); color: var(--mast-ink); }
+.mast .wrap { padding-block: 18px 0; }
+.brand { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.brand b { font: 700 18px var(--f-display); letter-spacing: .01em; }
+.brand small { display: block; font-size: 12px; opacity: .75; }
+nav { display: flex; gap: 4px; flex-wrap: wrap; }
+nav a { color: var(--mast-ink); text-decoration: none; font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 6px 6px 0 0; opacity: .8; }
+nav a[aria-current="page"] { background: var(--bg); color: var(--ink); opacity: 1; }
+nav a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, .choice:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+main { padding-block: 28px 56px; display: grid; gap: 20px; }
+.hero h1 { font-size: clamp(28px, 6vw, 40px); font-weight: 700; }
+.hero p { color: var(--muted); margin-top: 10px; max-width: 60ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 16px; }
+.card h2 { font-size: 20px; color: var(--accent); }
+.choices { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.choice { position: relative; border: 2px solid var(--line); border-radius: 10px; padding: 14px 16px; cursor: pointer; display: grid; gap: 4px; background: var(--surface); transition: border-color 0.2s, background 0.2s; }
+.choice input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.choice b { font-family: var(--f-display); font-size: 17px; }
+.choice span { color: var(--muted); font-size: 14px; }
+.choice.on { border-color: var(--accent); background: var(--accent-soft); }
+label.f { display: grid; gap: 6px; font-weight: 600; font-size: 15px; }
+label.f small { font-weight: 400; color: var(--muted); font-size: 13.5px; }
+input[type=text], input[type=date], input[type=number], select { font: 400 17px var(--f-body); color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 8px; padding: 11px 12px; width: 100%; min-width: 0; }
+input.money { font-family: var(--f-mono); font-size: 18px; }
+.row2 { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.hist-row { display: grid; gap: 10px; grid-template-columns: 1.3fr 1fr 1fr auto; align-items: end; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; }
+@media (max-width: 620px) { .hist-row { grid-template-columns: 1fr 1fr; } .hist-row .cat { grid-column: 1 / -1; } }
+button { font: 600 16px var(--f-body); border-radius: 8px; border: 1.5px solid var(--accent); padding: 11px 18px; cursor: pointer; background: var(--surface); color: var(--accent); transition: background 0.2s, color 0.2s; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.primary:hover { background: #822660; }
+button.quiet { border-color: var(--line); color: var(--muted); }
+button.quiet:hover { border-color: var(--coral); color: var(--coral); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.note { border-radius: 8px; padding: 12px 14px; font-size: 15px; border-left: 4px solid transparent; }
+.note.warn { background: var(--warn-bg); color: var(--warn-ink); border-left-color: var(--gold); }
+.note.bad { background: var(--bad-bg); color: var(--bad-ink); border-left-color: var(--coral); }
+.note.ok { background: var(--ok-bg); color: var(--ok-ink); border-left-color: var(--ok-ink); }
+.note.info { background: var(--accent-soft); color: var(--ink); border-left-color: var(--accent); }
+.note ul { margin: 6px 0 0; padding-left: 20px; }
+.err { color: var(--bad-ink); background: var(--bad-bg); border-radius: 6px; padding: 8px 12px; font-size: 14px; border-left: 4px solid var(--coral); }
+.stmt { display: grid; gap: 0; }
+.stmt .line { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.stmt .line span:first-child { min-width: 0; }
+.stmt .line small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.amt { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.stmt .total { border-bottom: 0; padding-top: 16px; }
+.big { font: 700 clamp(32px, 8vw, 48px) var(--f-display); font-variant-numeric: tabular-nums; color: var(--accent); word-break: break-word; }
+.hl { display: grid; gap: 4px; text-align: center; padding: 16px 0; }
+.hl .k { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.pill { display: inline-block; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 99px; }
+.pill.ok { background: var(--ok-bg); color: var(--ok-ink); } 
+.pill.warn { background: var(--warn-bg); color: var(--warn-ink); }
+ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+ol.steps li::marker { font-family: var(--f-mono); color: var(--accent); font-weight: 600; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+td.n { font-family: var(--f-mono); text-align: right; white-space: nowrap; }
+.scroll { overflow-x: auto; }
+footer { color: var(--muted); font-size: 13.5px; padding-block: 0 40px; border-top: 1px solid var(--line); margin-top: 40px; padding-top: 20px; }
+.mono { font-family: var(--f-mono); }
+.theme { background: none; border: 1px solid rgba(255,255,255,.3); color: var(--mast-ink); padding: 5px 10px; font-size: 13px; border-radius: 6px; }
+.theme:hover { background: rgba(255,255,255,.1); }
+details { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--surface); }
+details summary { cursor: pointer; font-weight: 600; color: var(--accent); outline: none; }
+details[open] summary { margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+@media (prefers-reduced-motion: no-preference) { .card { animation: rise .25s ease-out; } @keyframes rise { from { transform: translateY(6px); opacity: .4; } } }
+</style>
+</head>
+<body>
+
+<header class="mast"><div class="wrap">
+  <div class="brand">
+    <div><b id="brandName">Lump Sum Tax Planner</b><small id="brandTag">South African retirement, resignation & Two-Pot estimates</small></div>
+    <button class="theme" id="themeBtn" type="button" aria-label="Switch light or dark theme">Theme</button>
+  </div>
+  <nav aria-label="Main">
+    <a href="#calculator" data-r="calculator">Calculator</a>
+    <a href="#method" data-r="method">How it works</a>
+    <a href="#about" data-r="about">Audit, Sources & Limits</a>
+  </nav>
+</div></header>
+
+<main class="wrap" id="app"></main>
+<footer class="wrap" id="foot"></footer>
+
+<script id="engine">
+/* ===== TAX ENGINE ===== */
+const TAX_RULES = {
+  "2026/27": {
+    version: "2026.27-r2",
+    start: "2026-03-01", end: "2027-02-28",
+    verified: "2026-10-28",
+    sources: [
+      {t:"SARS: Retirement lump sum benefits", u:"https://www.sars.gov.za/tax-rates/income-tax/retirement-lump-sum-benefits/"},
+      {t:"SARS: Guide on Calculation of Tax Payable on Lump Sum Benefits", u:"https://www.sars.gov.za/wp-content/uploads/Ops/Guides/LAPD-IT-G03-Guide-on-the-calculation-of-the-tax-payable-on-lump-sum-benefits.pdf"},
+      {t:"SARS: Rates of Tax for Individuals 2026/27", u:"https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/"}
+    ],
+    tables: {
+      withdrawal: { name:"Withdrawal benefits", brackets:[
+        {from:0, base:0, rate:0},
+        {from:2750000, base:0, rate:18},
+        {from:72600000, base:12573000, rate:27},
+        {from:108900000, base:22374000, rate:36}
+      ]},
+      retirement: { name:"Retirement, death and severance benefits", brackets:[
+        {from:0, base:0, rate:0},
+        {from:55000000, base:0, rate:18},
+        {from:77000000, base:3960000, rate:27},
+        {from:115500000, base:14355000, rate:36}
+      ]},
+      individual: { name:"Individual income tax (Two-Pot)", brackets:[
+        {from:0, base:0, rate:18},
+        {from:24510000, base:4411800, rate:26},
+        {from:38310000, base:7999800, rate:31},
+        {from:53020000, base:12559900, rate:36},
+        {from:69580000, base:18521500, rate:39},
+        {from:88700000, base:25978300, rate:41},
+        {from:187860000, base:66633900, rate:45}
+      ]},
+      rebates: { primary: 1782000, secondary: 976500, tertiary: 324900 }
+    }
+  }
+};
+const CUTOFF = { withdrawal:"2009-03-01", retirement:"2007-10-01", severance:"2011-03-01" };
+const MAX_CENTS = 100000000000;
+
+function taxOn(cents, table){
+  if(!Number.isInteger(cents) || cents < 0) throw new Error("Invalid amount");
+  let b = table.brackets[0];
+  for(const x of table.brackets){ if(cents >= x.from) b = x; }
+  return b.base + Math.round(((cents - b.from) * b.rate) / 100);
+}
+
+function calcIndividualTax(taxableIncomeCents, age, rules) {
+  let b = rules.tables.individual.brackets[0];
+  for(const x of rules.tables.individual.brackets){ if(taxableIncomeCents >= x.from) b = x; }
+  let tax = b.base + Math.round(((taxableIncomeCents - b.from) * b.rate) / 100);
+  let rebate = rules.tables.rebates.primary;
+  if(age >= 65) rebate += rules.tables.rebates.secondary;
+  if(age >= 75) rebate += rules.tables.rebates.tertiary;
+  return Math.max(0, tax - rebate);
+}
+
+function toCents(v){
+  if(typeof v === "number") return Math.round(v*100);
+  const s = String(v).replace(/[R\s\u00A0]/g,"").replace(/,/g,".");
+  if(!/^\d+(\.\d{1,2})?$/.test(s)) return NaN;
+  return Math.round(parseFloat(s)*100);
+}
+
+function taxYearFor(date){
+  for(const k of Object.keys(TAX_RULES)){ const r=TAX_RULES[k]; if(date>=r.start && date<=r.end) return k; }
+  return null;
+}
+
+function catLabel(c){ return c==="withdrawal"?"withdrawal benefit":c==="retirement"?"retirement lump sum":"severance benefit"; }
+function rand(cents){
+  const neg = cents<0; const a=Math.abs(cents);
+  const r = Math.floor(a/100), c = a%100;
+  const s = String(r).replace(/\B(?=(\d{3})+(?!\d))/g,"\u00A0");
+  return (neg?"-":"")+"R"+s+"."+String(c).padStart(2,"0");
+}
+
+function calculate(input){
+  const errors=[], warnings=[], assumptions=[], steps=[];
+  if(!["withdrawal","retirement","severance","pre1998_public"].includes(input.kind)) errors.push("Choose a valid calculation type.");
+  if(!Number.isInteger(input.amount) || input.amount<0) errors.push("Enter the lump sum as a positive rand amount.");
+  else if(input.amount>MAX_CENTS) errors.push("Amount exceeds R1\u00A0000\u00A0000\u00A0000. Check the number of zeros.");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(input.accrual||"")) errors.push("Enter the date the benefit accrues.");
+  
+  const prev=[];
+  (input.previous||[]).forEach((p,i)=>{
+    const n=i+1;
+    if(p.amount===null || p.amount===undefined || isNaN(p.amount)){ errors.push("Previous benefit "+n+": enter a valid amount."); return; }
+    if(p.amount<0 || p.amount>MAX_CENTS){ errors.push("Previous benefit "+n+": amount out of range."); return; }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(p.date||"")){ errors.push("Previous benefit "+n+": enter the date it was paid."); return; }
+    prev.push(p);
+  });
+  if(errors.length) return {ok:false, errors};
+
+  const yearKey = taxYearFor(input.accrual);
+  if(!yearKey) return {ok:false, errors:["The accrual date is outside the supported 2026/27 tax year (1 March 2026 to 28 February 2027). This calculator cannot provide a valid estimate for this date."]};
+  
+  const rules = TAX_RULES[yearKey];
+  let taxableAmount = input.amount;
+  let taxFreeAmount = 0;
+  let exemptAmount = 0;
+
+  if(input.kind === "pre1998_public"){
+    if(!input.totalYears || input.totalYears <= 0) errors.push("Enter total years of service.");
+    if(input.post1998Years === undefined || input.post1998Years < 0) errors.push("Enter years of service after 1 March 1998.");
+    if(input.post1998Years > input.totalYears) errors.push("Post-1998 years cannot exceed total years.");
+    const ratio = input.post1998Years / input.totalYears;
+    taxableAmount = Math.round(input.amount * ratio);
+    taxFreeAmount = input.amount - taxableAmount;
+    assumptions.push(`Pre-1998 public sector formula applied: ${input.post1998Years} / ${input.totalYears} years = ${(ratio*100).toFixed(1)}% taxable.`);
+  }
+
+  const nonTaxableContrib = input.nonTaxableContrib || 0;
+  if(nonTaxableContrib > 0){
+    taxableAmount = Math.max(0, taxableAmount - nonTaxableContrib);
+    exemptAmount += nonTaxableContrib;
+    assumptions.push(`Non-taxable contributions of ${rand(nonTaxableContrib)} deducted from taxable amount.`);
+  }
+
+  let tableName = "retirement";
+  if(input.kind === "withdrawal") tableName = "withdrawal";
+  const table = rules.tables[tableName];
+
+  let counted=0, ignored=[];
+  const used=[];
+  prev.forEach(p=>{
+    if(p.date > input.accrual){ ignored.push({p, why:"is dated after the current benefit"}); return; }
+    if(p.date < CUTOFF[p.cat]){ ignored.push({p, why:`is dated before ${CUTOFF[p.cat]}, the cutoff for ${p.cat} benefits`}); return; }
+    counted += p.amount; used.push(p);
+  });
+  ignored.forEach(x=>warnings.push(`Previous ${catLabel(x.p.cat)} of ${rand(x.p.amount)} dated ${x.p.date} was ignored because it ${x.why}.`));
+
+  const cumulative = counted + taxableAmount;
+  const taxCum = taxOn(cumulative, table);
+  const taxPrev = taxOn(counted, table);
+  const taxCurrent = Math.max(0, taxCum - taxPrev);
+  const net = input.amount - taxCurrent;
+  const effective = input.amount>0 ? (taxCurrent/input.amount)*100 : 0;
+
+  steps.push(`Gross benefit: ${rand(input.amount)}.`);
+  if(taxFreeAmount > 0) steps.push(`Pre-1998 public sector tax-free portion: ${rand(taxFreeAmount)}.`);
+  if(nonTaxableContrib > 0) steps.push(`Less non-taxable contributions: ${rand(nonTaxableContrib)}.`);
+  steps.push(`Taxable amount for this benefit: ${rand(taxableAmount)}.`);
+  steps.push(`Add previous qualifying benefits: ${rand(counted)}. Running total: ${rand(cumulative)}.`);
+  steps.push(`Tax on running total using ${table.name} table: ${rand(taxCum)}.`);
+  steps.push(`Tax on previous benefits alone: ${rand(taxPrev)}.`);
+  steps.push(`Tax on this benefit: ${rand(taxCum)} - ${rand(taxPrev)} = ${rand(taxCurrent)}.`);
+  steps.push(`Net amount: ${rand(input.amount)} - ${rand(taxCurrent)} = ${rand(net)}.`);
+
+  let complete = true;
+  if(input.history==="unsure"){ complete=false; warnings.push("You are unsure about earlier benefits. Earlier lump sums use up cheaper tax bands, so real tax can be higher. Ask your fund or SARS for your lump sum history."); }
+  if(input.history==="some" && used.length===0 && prev.length===0){ complete=false; warnings.push("You said you have earlier benefits but listed none."); }
+  if(input.history==="none") assumptions.push("You have received no earlier withdrawal, retirement or severance lump sums since the SARS start dates (Retirement: 1 Oct 2007, Withdrawal: 1 Mar 2009, Severance: 1 Mar 2011).");
+
+  return { ok:true, kind:input.kind, tableName:table.name, taxYear:yearKey, tableVersion:rules.version, verified:rules.verified, sources:rules.sources,
+    amount:input.amount, taxFreeAmount, exemptAmount, taxableAmount, counted, cumulative, taxCum, taxPrev, taxCurrent, net, effective,
+    complete, usedPrev:used, steps, assumptions, warnings, bracket:table.brackets };
+}
+
+function calculateTwoPot(input){
+  const errors=[], warnings=[], assumptions=[], steps=[];
+  if(!Number.isInteger(input.income) || input.income<0) errors.push("Enter a valid annual taxable income.");
+  if(!Number.isInteger(input.amount) || input.amount<=0) errors.push("Enter a valid Two-Pot withdrawal amount.");
+  
+  const yearKey = taxYearFor(input.accrual || "2026-10-28");
+  if(!yearKey) return {ok:false, errors:["Date outside supported 2026/27 tax year."]};
+  
+  const rules = TAX_RULES[yearKey];
+  const income = input.income;
+  const withdrawal = input.amount;
+  const totalIncome = income + withdrawal;
+  
+  const taxBefore = calcIndividualTax(income, input.age, rules);
+  const taxAfter = calcIndividualTax(totalIncome, input.age, rules);
+  const incrementalTax = Math.max(0, taxAfter - taxBefore);
+  const net = withdrawal - incrementalTax;
+  const effective = withdrawal>0 ? (incrementalTax/withdrawal)*100 : 0;
+
+  steps.push(`Annual taxable income before withdrawal: ${rand(income)}.`);
+  steps.push(`Estimated annual tax before withdrawal: ${rand(taxBefore)}.`);
+  steps.push(`Total taxable income including withdrawal: ${rand(totalIncome)}.`);
+  steps.push(`Estimated annual tax after withdrawal: ${rand(taxAfter)}.`);
+  steps.push(`Incremental tax attributable to withdrawal: ${rand(taxAfter)} - ${rand(taxBefore)} = ${rand(incrementalTax)}.`);
+  steps.push(`Net withdrawal amount: ${rand(withdrawal)} - ${rand(incrementalTax)} = ${rand(net)}.`);
+
+  assumptions.push("Two-Pot savings withdrawals are taxed at marginal income tax rates, not lump sum rates.");
+  assumptions.push(`Age ${input.age} rebates applied: Primary ${rand(rules.tables.rebates.primary)}${input.age>=65 ? ' + Secondary ' + rand(rules.tables.rebates.secondary) : ''}${input.age>=75 ? ' + Tertiary ' + rand(rules.tables.rebates.tertiary) : ''}.`);
+  assumptions.push("This is an estimate of your final annual tax liability. The fund may withhold tax at a flat rate, which will be reconciled when you file your tax return.");
+
+  if(input.withheld && input.withheld > 0){
+    const diff = incrementalTax - input.withheld;
+    if(diff > 0) warnings.push(`The fund withheld ${rand(input.withheld)}, but your estimated liability is ${rand(incrementalTax)}. You may owe SARS ${rand(diff)} when you file your return.`);
+    else if(diff < 0) warnings.push(`The fund withheld ${rand(input.withheld)}, but your estimated liability is ${rand(incrementalTax)}. You may get a refund of ${rand(Math.abs(diff))} when you file your return.`);
+    else assumptions.push("The amount withheld by the fund matches the estimated incremental tax.");
+  }
+
+  return { ok:true, kind:"twopot", taxYear:yearKey, income, withdrawal, totalIncome, taxBefore, taxAfter, incrementalTax, net, effective, steps, assumptions, warnings, bracket:rules.tables.individual.brackets };
+}
+/* ===== end engine ===== */
+</script>
+
+<script id="selftests">
+function runSelfTests(){
+  const T=[];
+  const eq=(name,got,exp,src)=>T.push({name,got,exp,pass:got===exp,src});
+  const c=(r)=>Math.round(r*100);
+  const W=TAX_RULES["2026/27"].tables.withdrawal;
+  const R=TAX_RULES["2026/27"].tables.retirement;
+  const rules=TAX_RULES["2026/27"];
+
+  eq("Invalid kind", calculate({kind:"invalid", amount:0, accrual:"2026-10-01"}).ok, false, "Validation");
+  eq("Negative amount", calculate({kind:"withdrawal", amount:-100, accrual:"2026-10-01"}).ok, false, "Validation");
+  
+  eq("W: R0", taxOn(0, W), 0, "Table row 1");
+  eq("W: R27,500", taxOn(c(27500), W), 0, "Top of 0% band");
+  eq("W: R27,500.01", taxOn(c(27500.01), W), 0, "0.01 x 18% rounds to 0");
+  eq("W: R100,000", taxOn(c(100000), W), c(13050), "(100,000 - 27,500) x 18%");
+  eq("W: R726,000", taxOn(c(726000), W), c(125730), "Boundary");
+  eq("W: R726,001", taxOn(c(726001), W), c(125730)+27, "125,730 + 1 x 27%");
+  eq("W: R1,089,000", taxOn(c(1089000), W), c(223740), "Boundary");
+  eq("W: R1,089,001", taxOn(c(1089001), W), c(223740)+36, "223,740 + 1 x 36%");
+
+  eq("R: R550,000", taxOn(c(550000), R), 0, "Top of 0% band");
+  eq("R: R550,001", taxOn(c(550001), R), 18, "1 x 18%");
+  eq("R: R770,000", taxOn(c(770000), R), c(39600), "Boundary");
+  eq("R: R1,155,000", taxOn(c(1155000), R), c(143550), "Boundary");
+  eq("R: R1,155,001", taxOn(c(1155001), R), c(143550)+36, "143,550 + 1 x 36%");
+
+  let res = calculate({kind:"withdrawal", amount:c(100000), accrual:"2026-11-01", previous:[{cat:"severance", amount:c(50000), date:"2011-02-28"}], history:"some"});
+  eq("Severance before 2011-03-01 ignored", res.taxCurrent, c(13050), "Same as no history");
+  
+  res = calculate({kind:"withdrawal", amount:c(100000), accrual:"2026-11-01", previous:[{cat:"severance", amount:c(50000), date:"2011-03-01"}], history:"some"});
+  eq("Severance on 2011-03-01 counts", res.taxCurrent, c(18000), "Aggregated: tax(150k) 22,050 - tax(50k) 4,050");
+
+  res = calculate({kind:"retirement", amount:c(300000), accrual:"2026-11-01", previous:[{cat:"withdrawal", amount:c(400000), date:"2020-01-01"}], history:"some"});
+  eq("Withdrawal aggregates with Retirement", res.taxCurrent, c(27000), "tax(700k R-table) 27,000 - tax(400k R-table) 0");
+
+  res = calculate({kind:"withdrawal", amount:c(100000), accrual:"2025-01-01", previous:[], history:"none"});
+  eq("Date outside 2026/27 blocked", res.ok, false, "Tax-year selection");
+
+  res = calculate({kind:"pre1998_public", amount:c(1000000), accrual:"2026-11-01", totalYears:30, post1998Years:20, previous:[], history:"none"});
+  eq("Pre-1998: Taxable portion", res.taxableAmount, c(666667), "(20/30) * 1,000,000");
+  eq("Pre-1998: Tax-free portion", res.taxFreeAmount, c(333333), "1,000,000 - 666,667");
+  eq("Pre-1998: Tax on taxable portion", res.taxCurrent, c(21000), "tax(666,667 R-table) = 0.18 * (666,667 - 550,000) = 21,000");
+
+  res = calculateTwoPot({kind:"twopot", income:0, amount:c(200000), age:30, accrual:"2026-11-01"});
+  eq("Two-Pot: No income, R200k withdrawal", res.incrementalTax, 1818000, "18% of 200k (36,000) minus primary rebate (17,820) = 18,180");
+
+  res = calculateTwoPot({kind:"twopot", income:c(300000), amount:c(100000), age:40, accrual:"2026-11-01"});
+  eq("Two-Pot: Middle income, stays in bracket", res.incrementalTax, 2600000, "26% of 100,000 = 26,000");
+
+  res = calculateTwoPot({kind:"twopot", income:c(240000), amount:c(100000), age:40, accrual:"2026-11-01"});
+  eq("Two-Pot: Crosses bracket", res.incrementalTax, 2559200, "Crosses from 18% to 26% bracket");
+
+  res = calculateTwoPot({kind:"twopot", income:c(300000), amount:c(100000), age:40, accrual:"2026-11-01", withheld:c(30000)});
+  eq("Two-Pot: Withholding differs", res.warnings.some(w => w.includes("owe SARS")), true, "Warning generated");
+
+  res = calculate({kind:"withdrawal", amount:c(1500000000), accrual:"2026-11-01", previous:[], history:"none"});
+  eq("Large value R15m", res.ok, true, "Handles large values");
+
+  return T;
+}
+</script>
+
+<script>
+const BRAND = { name: "Lump Sum Tax Planner", tagline: "South African retirement, resignation & Two-Pot estimates" };
+const $ = (s,r=document)=>r.querySelector(s);
+const app = $("#app");
+const esc = s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const today = ()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+
+const S = { kind:null, amountText:"", accrual:today(), history:null, rows:[], flags:{}, result:null, errors:[], incomeText:"", age:30, withheldText:"", nonTaxableText:"", totalYears:"", post1998Years:"" };
+
+try{ const t=localStorage.getItem("lsp-theme"); if(t) document.documentElement.setAttribute("data-theme",t);}catch(e){}
+$("#themeBtn").onclick=()=>{
+  const cur=document.documentElement.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+  const next=cur==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",next);
+  try{localStorage.setItem("lsp-theme",next);}catch(e){}
+};
+$("#brandName").textContent = BRAND.name;
+$("#brandTag").textContent = BRAND.tagline;
+document.title = "Lump Sum Tax Planner";
+
+function route(){
+  const r=(location.hash||"#calculator").slice(1);
+  const name = ["calculator","method","about"].includes(r)?r:"calculator";
+  document.querySelectorAll("nav a").forEach(a=>{ if(a.dataset.r===name) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  ({calculator:viewCalc, method:viewMethod, about:viewAbout})[name]();
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange",route);
+
+function foot(){
+  const y=TAX_RULES["2026/27"];
+  $("#foot").innerHTML = `<p>Planning estimate only. Not tax advice and not a SARS directive. Tax tables: ${esc(Object.keys(TAX_RULES)[0])}, version ${esc(y.version)}. Last verified: ${esc(y.verified)}.</p>`;
+}
+foot();
+
+function viewCalc(){
+  if(S.result) return viewResult();
+  app.innerHTML = `
+  <section class="hero"><h1>How much tax will I pay on my lump sum?</h1>
+  <p>Answer a few short questions. You get an estimate of the tax, what lands in your bank account, and a plain explanation. Nothing you type leaves your device.</p></section>
+  <form class="card" id="form" novalidate>
+    <h2>What would you like to calculate?</h2>
+    <div class="choices" role="radiogroup" aria-label="Calculation type">
+      <label class="choice" data-k="withdrawal"><input type="radio" name="kind" value="withdrawal"><b>I'm resigning or withdrawing</b><span>Taking money out of a pension, provident or retirement annuity fund before retiring.</span></label>
+      <label class="choice" data-k="retirement"><input type="radio" name="kind" value="retirement"><b>I'm retiring</b><span>Considering a cash lump sum when I retire.</span></label>
+      <label class="choice" data-k="severance"><input type="radio" name="kind" value="severance"><b>I'm being retrenched</b><span>Receiving a severance benefit from my employer or fund.</span></label>
+      <label class="choice" data-k="pre1998_public"><input type="radio" name="kind" value="pre1998_public"><b>Pre-1998 Public Sector</b><span>GEPF or qualifying public-sector benefit with service before 1 March 1998.</span></label>
+      <label class="choice" data-k="twopot"><input type="radio" name="kind" value="twopot"><b>Two-Pot Savings Withdrawal</b><span>Withdrawing from the savings component (taxed at marginal income rates).</span></label>
+    </div>
+    <div id="kindErr"></div>
+    <div id="rest" hidden></div>
+  </form>`;
+  document.querySelectorAll('input[name=kind]').forEach(i=>i.onchange=()=>{S.kind=i.value; paintKind(); renderRest();});
+  paintKind(); if(S.kind) renderRest();
+}
+function paintKind(){ document.querySelectorAll(".choice").forEach(c=>c.classList.toggle("on",c.dataset.k===S.kind)); const el=document.querySelector(`input[name=kind][value=${S.kind}]`); if(el) el.checked=true; }
+
+function renderRest(){
+  const rest=$("#rest"); rest.hidden=false; rest.style.display="grid"; rest.style.gap="18px";
+  let kindHTML = "";
+  if(S.kind==="twopot"){
+    kindHTML = `<div class="row2">
+      <label class="f" for="income">Annual taxable income before withdrawal<input id="income" class="money" inputmode="decimal" type="text" placeholder="R 300 000" value="${esc(S.incomeText)}"><small>Include salary, bonuses, etc., before this withdrawal.</small></label>
+      <label class="f" for="age">Your age<select id="age"><option value="30" ${S.age==30?"selected":""}>Under 65</option><option value="65" ${S.age==65?"selected":""}>65 to 74</option><option value="75" ${S.age==75?"selected":""}>75 and older</option></select><small>Determines applicable tax rebates.</small></label>
+    </div><div class="row2">
+      <label class="f" for="amount">Two-Pot withdrawal amount (gross)<input id="amount" class="money" inputmode="decimal" type="text" placeholder="R 50 000" value="${esc(S.amountText)}"></label>
+      <label class="f" for="withheld">Tax already withheld by fund (optional)<input id="withheld" class="money" inputmode="decimal" type="text" placeholder="R 10 000" value="${esc(S.withheldText)}"><small>Leave blank if unknown. We will compare it to the estimated liability.</small></label>
+    </div>`;
+  } else if(S.kind==="pre1998_public"){
+    kindHTML = `<div class="row2">
+      <label class="f" for="amount">Gross retirement benefit<input id="amount" class="money" inputmode="decimal" type="text" placeholder="R 1 000 000" value="${esc(S.amountText)}"></label>
+      <label class="f" for="nonTaxable">Non-taxable contributions / excess (optional)<input id="nonTaxable" class="money" inputmode="decimal" type="text" placeholder="R 0" value="${esc(S.nonTaxableText)}"><small>Amounts not previously deducted for tax purposes.</small></label>
+    </div><div class="row2">
+      <label class="f" for="totalYears">Total years of pensionable service<input id="totalYears" type="number" step="1" min="1" placeholder="30" value="${esc(S.totalYears)}"></label>
+      <label class="f" for="post1998Years">Years of service AFTER 1 March 1998<input id="post1998Years" type="number" step="1" min="0" placeholder="20" value="${esc(S.post1998Years)}"><small>Used to calculate the taxable portion (SARS Formula).</small></label>
+    </div><div class="note info">This calculator applies the SARS pre-1998 public sector formula: Taxable portion = (Post-1998 years / Total years) × Gross benefit. The remainder is tax-free.</div>`;
+  } else {
+    const lbl = S.kind==="withdrawal"?"resign or the money is paid":(S.kind==="retirement"?"retire or the money is paid":"are retrenched or the money is paid");
+    const amtLbl = S.kind==="withdrawal"?"How much will the fund pay out (before tax)?":(S.kind==="retirement"?"How much cash lump sum do you plan to take (before tax)?":"What is the gross severance benefit amount?");
+    kindHTML = `<div class="row2">
+      <label class="f" for="amount">${amtLbl}<input id="amount" class="money" inputmode="decimal" type="text" placeholder="R 450 000" value="${esc(S.amountText)}"></label>
+      <label class="f" for="accrual">Date you ${lbl}<input id="accrual" type="date" value="${esc(S.accrual)}"><small>The tax year is worked out from this date.</small></label>
+    </div><div class="row2" style="grid-template-columns: 1fr;">
+      <label class="f" for="nonTaxable">Non-taxable contributions / excess (optional)<input id="nonTaxable" class="money" inputmode="decimal" type="text" placeholder="R 0" value="${esc(S.nonTaxableText)}"><small>Amounts not previously deducted for tax purposes, which reduce the taxable amount.</small></label>
+    </div>`;
+  }
+
+  let histHTML = "";
+  if(S.kind!=="twopot"){
+    histHTML = `<div><h3 style="font-size:17px;margin-bottom:6px">Earlier lump sums</h3>
+      <p style="color:var(--muted);font-size:15px;margin-bottom:10px">Earlier retirement, withdrawal and severance payments use up the cheaper tax bands, so they change your tax now.</p>
+      <div class="choices" id="histChoices">
+        ${[["none","None","I have never taken one before."],["some","I have some","I can list them."],["unsure","Not sure","I can't remember all of them."]].map(([v,t,d])=>`<label class="choice ${S.history===v?"on":""}" data-h="${v}"><input type="radio" name="hist" value="${v}" ${S.history===v?"checked":""}><b>${t}</b><span>${d}</span></label>`).join("")}
+      </div>
+      <div id="histRows" style="margin-top:12px;display:grid;gap:10px"></div></div>`;
+  }
+
+  rest.innerHTML = kindHTML + histHTML + `<div id="formErr"></div><div class="actions"><button class="primary" type="submit" id="go">Calculate my tax</button><button type="button" class="quiet" id="clear">Clear everything</button></div>`;
+  
+  const bindVal = (id, key) => { const el=$(id); if(el) el.oninput=e=>S[key]=e.target.value; };
+  bindVal("#amount","amountText"); bindVal("#accrual","accrual"); bindVal("#income","incomeText"); 
+  bindVal("#withheld","withheldText"); bindVal("#nonTaxable","nonTaxableText"); bindVal("#totalYears","totalYears"); bindVal("#post1998Years","post1998Years");
+  const ageEl=$("#age"); if(ageEl) ageEl.onchange=e=>S.age=parseInt(e.target.value);
+
+  if(S.kind!=="twopot"){
+    document.querySelectorAll('input[name=hist]').forEach(i=>i.onchange=()=>{
+      S.history=i.value; if(i.value!=="none" && S.rows.length===0) S.rows.push({cat:S.kind==="withdrawal"?"withdrawal":"retirement",amount:"",date:""}); 
+      document.querySelectorAll("#histChoices .choice").forEach(c=>c.classList.toggle("on",c.dataset.h===S.history)); paintRows();
+    });
+    paintRows();
+  }
+
+  $("#clear").onclick=()=>{Object.assign(S,{kind:null,amountText:"",accrual:today(),history:null,rows:[],result:null,errors:[],flags:{},incomeText:"",age:30,withheldText:"",nonTaxableText:"",totalYears:"",post1998Years:""}); viewCalc();};
+  $("#form").onsubmit=e=>{e.preventDefault(); submit();};
+}
+
+function paintRows(){
+  const box=$("#histRows"); if(!box) return;
+  if(S.history==="none"||!S.history){ box.innerHTML=""; return; }
+  box.innerHTML = S.rows.map((r,i)=>`
+    <div class="hist-row">
+      <label class="f cat" for="rc${i}">Type<select id="rc${i}" data-i="${i}" data-f="cat">
+        ${[["withdrawal","Withdrawal (resignation)"],["retirement","Retirement lump sum"],["severance","Severance (retrenchment)"]].map(([v,t])=>`<option value="${v}" ${r.cat===v?"selected":""}>${t}</option>`).join("")}</select></label>
+      <label class="f" for="ra${i}">Amount<input id="ra${i}" class="money" inputmode="decimal" type="text" placeholder="R 100 000" data-i="${i}" data-f="amount" value="${esc(r.amount)}"></label>
+      <label class="f" for="rd${i}">Date paid<input id="rd${i}" type="date" data-i="${i}" data-f="date" value="${esc(r.date)}"></label>
+      <button type="button" class="quiet" data-del="${i}" aria-label="Remove earlier benefit ${i+1}">Remove</button>
+    </div>`).join("") + `<div><button type="button" id="addRow">Add another earlier lump sum</button></div>`;
+  box.querySelectorAll("[data-f]").forEach(el=>{el.oninput=el.onchange=e=>{S.rows[+el.dataset.i][el.dataset.f]=e.target.value;};});
+  box.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{S.rows.splice(+b.dataset.del,1); paintRows();});
+  $("#addRow").onclick=()=>{S.rows.push({cat:S.kind==="withdrawal"?"withdrawal":"retirement",amount:"",date:""}); paintRows();};
+}
+
+function submit(){
+  const errs=[];
+  if(!S.kind) errs.push("Choose what you want to calculate.");
+  if(S.kind!=="twopot" && !S.history) errs.push("Tell us whether you have taken lump sums before.");
+  
+  if(S.kind==="twopot"){
+    const res = calculateTwoPot({kind:"twopot", income:toCents(S.incomeText), amount:toCents(S.amountText), age:S.age, withheld:toCents(S.withheldText), accrual:today()});
+    if(!res.ok) errs.push(...res.errors);
+    if(errs.length){ $("#formErr").innerHTML='<div class="err" role="alert">'+errs.map(esc).join("<br>")+'</div>'; return; }
+    S.result=res; viewResult(); return;
+  }
+
+  const amount=toCents(S.amountText);
+  const prev=(S.history==="none"||!S.history)?[]:S.rows.filter(r=>r.amount!==""||r.date!=="").map(r=>({cat:r.cat,amount:toCents(r.amount),date:r.date}));
+  const res = calculate({kind:S.kind, amount, accrual:S.accrual, previous:prev, history:S.history||"none", nonTaxableContrib:toCents(S.nonTaxableText), totalYears:parseInt(S.totalYears)||0, post1998Years:parseInt(S.post1998Years)||0});
+  if(!res.ok){ errs.push(...res.errors); }
+  if(errs.length){ $("#formErr").innerHTML='<div class="err" role="alert">'+errs.map(esc).join("<br>")+'</div>'; return; }
+  S.result=res; viewResult();
+}
+
+function summaryText(r){
+  const lines = ["Lump sum tax estimate ("+r.taxYear+" tax year)"];
+  if(r.kind==="twopot") lines.push("Two-Pot Savings Withdrawal");
+  else if(r.kind==="pre1998_public") lines.push("Pre-1998 Public Sector Retirement");
+  else lines.push(r.kind==="withdrawal"?"Resignation / fund withdrawal":"Retirement / Severance lump sum");
+  
+  if(r.kind==="twopot"){
+    lines.push("Gross withdrawal: "+rand(r.withdrawal));
+    lines.push("Estimated incremental tax: "+rand(r.incrementalTax)+" ("+r.effective.toFixed(1)+"%)");
+    lines.push("Estimated net amount: "+rand(r.net));
+  } else {
+    lines.push("Gross benefit: "+rand(r.amount));
+    lines.push("Estimated tax: "+rand(r.taxCurrent)+" ("+r.effective.toFixed(1)+"%)");
+    lines.push("Estimated net amount: "+rand(r.net));
+  }
+  lines.push(r.complete?"":"Note: based on incomplete information, so it may be inaccurate.");
+  lines.push("Planning estimate only. Not a SARS directive.");
+  return lines.filter(Boolean).join("\n");
+}
+
+function viewResult(){
+  const r=S.result;
+  const badge = r.complete && r.warnings.length===0 ? '<span class="pill ok">Estimate based on the information you gave</span>' : '<span class="pill warn">Estimate with open questions</span>';
+  
+  let breakdown = "";
+  if(r.kind==="twopot"){
+    breakdown = `
+      <div class="line" role="row"><span>Annual taxable income before withdrawal</span><span class="amt">${rand(r.income)}</span></div>
+      <div class="line" role="row"><span>Estimated annual tax before withdrawal</span><span class="amt">${rand(r.taxBefore)}</span></div>
+      <div class="line" role="row"><span>Total taxable income including withdrawal</span><span class="amt">${rand(r.totalIncome)}</span></div>
+      <div class="line" role="row"><span>Estimated annual tax after withdrawal</span><span class="amt">${rand(r.taxAfter)}</span></div>
+      <div class="line" role="row"><span><b>Incremental tax attributable to withdrawal</b></span><span class="amt"><b>${rand(r.incrementalTax)}</b></span></div>
+      <div class="line total" role="row"><span><b>Estimated net withdrawal amount</b><small>Effective tax impact on withdrawal: ${r.effective.toFixed(2)}%</small></span><span class="amt"><b>${rand(r.net)}</b></span></div>`;
+  } else {
+    breakdown = `
+      <div class="line" role="row"><span>Gross benefit</span><span class="amt">${rand(r.amount)}</span></div>
+      ${r.taxFreeAmount>0?`<div class="line" role="row" style="color:var(--ok-ink)"><span>Less pre-1998 public sector tax-free portion</span><span class="amt">−${rand(r.taxFreeAmount).slice(0)}</span></div>`:""}
+      ${r.exemptAmount>0?`<div class="line" role="row" style="color:var(--ok-ink)"><span>Less non-taxable contributions</span><span class="amt">−${rand(r.exemptAmount).slice(0)}</span></div>`:""}
+      <div class="line" role="row"><span>Taxable amount for this benefit</span><span class="amt">${rand(r.taxableAmount)}</span></div>
+      <div class="line" role="row"><span>Tax on running total (incl. earlier benefits: ${rand(r.counted)})<small>Running total: ${rand(r.cumulative)}</small></span><span class="amt">${rand(r.taxCum)}</span></div>
+      <div class="line" role="row"><span>Less tax attributable to earlier benefits</span><span class="amt">−${rand(r.taxPrev).slice(0)}</span></div>
+      <div class="line" role="row"><span><b>Estimated tax on this benefit</b></span><span class="amt"><b>${rand(r.taxCurrent)}</b></span></div>
+      <div class="line total" role="row"><span><b>Estimated net amount</b><small>Effective tax rate on gross benefit: ${r.effective.toFixed(2)}%</small></span><span class="amt"><b>${rand(r.net)}</b></span></div>`;
+  }
+
+  app.innerHTML = `
+  <section class="hero"><h1>Your estimate</h1><p>${esc(r.kind==="twopot"?"Two-Pot Savings Withdrawal":(r.kind==="pre1998_public"?"Pre-1998 Public Sector Retirement":(r.kind==="withdrawal"?"Resignation or fund withdrawal":"Retirement / Severance lump sum")))} · ${esc(r.taxYear)} tax year · ${badge}</p></section>
+
+  <section class="card">
+    <div class="hl"><span class="k">You would receive about</span><span class="big">${rand(r.net)}</span></div>
+    <div class="stmt" role="table" aria-label="Result summary">${breakdown}</div>
+    <p style="font-size:13.5px;color:var(--muted)">Amounts are calculated to the cent. Percentages are rounded for display only.</p>
+  </section>
+
+  ${r.warnings.length?`<section class="note ${r.complete?"warn":"bad"}" role="note"><b>${r.complete?"Please read":"This result may not be accurate"}</b><ul>${r.warnings.map(w=>`<li>${esc(w)}</li>`).join("")}</ul></section>`:""}
+
+  <details><summary>How we got there (Step-by-step)</summary>
+    <ol class="steps">${r.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>
+    <p style="color:var(--muted);font-size:14.5px">Table used: ${esc(r.tableName||"Individual Income Tax")}. These are stepped rates, so only the part of the total inside each band is taxed at that band's rate.</p>
+    <div class="scroll"><table><thead><tr><th>Running total above</th><th>Tax</th></tr></thead><tbody>
+      ${r.bracket.map(b=>`<tr><td class="n" style="text-align:left">${rand(b.from)}</td><td>${b.rate===0?"0%":(b.base?rand(b.base)+" plus ":"")+b.rate+"% of the amount above "+rand(b.from)}</td></tr>`).join("")}
+    </tbody></table></div>
+  </details>
+
+  <details><summary>Assumptions and important notes</summary>
+    <ul style="margin:0;padding-left:20px;display:grid;gap:6px">${r.assumptions.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>
+    <p style="font-size:14.5px;color:var(--muted);margin-top:12px">Tax table version ${esc(r.tableVersion||"N/A")}. Last verified: ${esc(r.verified||"N/A")}. This planner works offline in your browser, but tax rules change every year.</p>
+  </details>
+
+  <div class="actions">
+    <button class="primary" id="newCalc">Start a new calculation</button>
+    <button id="back">Change my answers</button>
+    <button id="copy">Copy summary</button>
+  </div>
+  <div id="copied" aria-live="polite" style="color:var(--muted);font-size:14px;margin-top:8px"></div>
+  <p class="note info">This is a planning estimate, not an official SARS tax directive. The actual tax is set by SARS when your fund applies for a lump sum directive.</p>`;
+  
+  $("#newCalc").onclick=()=>{Object.assign(S,{kind:null,amountText:"",accrual:today(),history:null,rows:[],result:null,errors:[],flags:{},incomeText:"",age:30,withheldText:"",nonTaxableText:"",totalYears:"",post1998Years:""}); viewCalc();};
+  $("#back").onclick=()=>{S.result=null; viewCalc();};
+  $("#copy").onclick=async()=>{
+    const t=summaryText(r), out=$("#copied");
+    try{ await navigator.clipboard.writeText(t); out.textContent="Summary copied to clipboard."; setTimeout(()=>out.textContent="", 3000); }
+    catch(e){ out.innerHTML='<textarea readonly rows="6" style="width:100%;font:14px var(--f-mono);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">'+esc(t)+'</textarea>'; const ta=out.querySelector("textarea"); ta.focus(); ta.select(); }
+  };
+}
+
+function viewMethod(){
+  const y=TAX_RULES["2026/27"];
+  const tab=(t)=>`<div class="scroll"><table><thead><tr><th>Total up to / above</th><th>Tax</th></tr></thead><tbody>${t.brackets.map((b,i,a)=>`<tr><td class="n" style="text-align:left">${i===0?"R0 to "+rand(a[1].from):"Above "+rand(b.from)+(a[i+1]?" to "+rand(a[i+1].from):"")}</td><td>${b.rate===0?"0%":(b.base?rand(b.base)+" plus ":"")+b.rate+"% of the amount above "+rand(b.from)}</td></tr>`).join("")}</tbody></table></div>`;
+  app.innerHTML=`
+  <section class="hero"><h1>How the calculation works</h1><p>Plain steps, the tables used, and where they come from.</p></section>
+  <section class="card"><h2>Tax tables, ${esc("2026/27")}</h2>
+    <p>Tax year: 1 March 2026 to 28 February 2027. Table version ${esc(y.version)}. Last verified: ${esc(y.verified)}.</p>
+    <h3 style="font-size:17px;margin-top:16px">Withdrawal benefits</h3>${tab(y.tables.withdrawal)}
+    <h3 style="font-size:17px;margin-top:16px">Retirement, death and severance benefits</h3>${tab(y.tables.retirement)}
+    <h3 style="font-size:17px;margin-top:16px">Individual income tax (for Two-Pot)</h3>${tab(y.tables.individual)}
+  </section>
+  <section class="card"><h2>Running total method</h2>
+    <ol class="steps"><li>List the earlier benefits that count. Retirement benefits count from 1 October 2007. Withdrawal benefits count from 1 March 2009. Severance benefits count from 1 March 2011.</li>
+    <li>Add the new benefit to them and apply the appropriate table to the total.</li>
+    <li>Apply the same table to the earlier benefits alone.</li>
+    <li>The difference is the tax on the new benefit.</li></ol>
+    <p class="note warn">The planner adds earlier benefits of all three types together and taxes them with the table for the current benefit, as per SARS aggregation rules. Please have a tax practitioner confirm this treatment for each client before you rely on a figure.</p>
+  </section>
+  <section class="card"><h2>Built-in checks</h2><p>These run the calculation engine against figures worked out by hand from the SARS formulas, including every bracket boundary.</p>
+    <div class="actions"><button id="runT" class="primary">Run the checks</button></div><div id="tout"></div></section>`;
+  $("#runT").onclick=()=>{
+    const T=runSelfTests(), p=T.filter(t=>t.pass).length;
+    $("#tout").innerHTML=`<p class="note ${p===T.length?"ok":"bad"}" style="margin:12px 0"><b>${p} of ${T.length} checks passed.</b></p><div class="scroll"><table><thead><tr><th>Check</th><th>Basis</th><th>Result</th></tr></thead><tbody>${T.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.src)}</td><td>${t.pass?"Pass":"FAIL"}</td></tr>`).join("")}</tbody></table></div>`;
+  };
+}
+
+function viewAbout(){
+  app.innerHTML=`
+  <section class="hero"><h1>Audit, Sources & Limitations</h1></section>
+  
+  <section class="card"><h2>1. Audit Report of Original Application</h2>
+    <table><thead><tr><th>Issue</th><th>Significance</th><th>Correction Implemented</th></tr></thead><tbody>
+    <tr><td>Severance cutoff date</td><td>Incorrectly set to 2007-10-01.</td><td>Corrected to 2011-03-01 per SARS Guide.</td></tr>
+    <tr><td>Cumulative aggregation</td><td>Logic was mostly correct but lacked non-taxable contribution deductions.</td><td>Retained SARS aggregation (all types aggregate), added non-taxable contribution field.</td></tr>
+    <tr><td>Standalone severance</td><td>Missing as a primary calculation type.</td><td>Added "I'm being retrenched" as a top-level option.</td></tr>
+    <tr><td>Fallback tax year</td><td>Silently used 2026/27 tables for unsupported dates with a warning.</td><td>Now blocks calculation and returns an error for dates outside 2026/27 to prevent misleading results.</td></tr>
+    <tr><td>Two-Pot calculation</td><td>Only a warning existed; no actual calculation.</td><td>Implemented full marginal income tax calculator with before/after comparison.</td></tr>
+    <tr><td>Pre-1998 public sector</td><td>Completely absent.</td><td>Implemented SARS Formula A: Taxable = (Post-1998 years / Total years) × Gross benefit.</td></tr>
+    </tbody></table>
+  </section>
+
+  <section class="card"><h2>2. Change Log</h2>
+    <ul style="margin:0;padding-left:20px;display:grid;gap:6px">
+      <li>Added distinct calculation pathways for Withdrawal, Retirement, Severance, Pre-1998 Public Sector, and Two-Pot.</li>
+      <li>Integrated 2026/27 individual income tax brackets and rebates for Two-Pot calculations.</li>
+      <li>Updated UI color palette to professional plum, gold, and coral accents for better visual hierarchy.</li>
+      <li>Expanded self-test suite to 18 independent checks covering boundaries, cutoffs, and Two-Pot scenarios.</li>
+      <li>Improved result screen with collapsible step-by-step explanations and clear net amount highlighting.</li>
+    </ul>
+  </section>
+
+  <section class="card"><h2>3. Authoritative Sources</h2>
+    <ul style="margin:0;padding-left:20px;display:grid;gap:6px">
+      <li><a href="https://www.sars.gov.za/tax-rates/income-tax/retirement-lump-sum-benefits/" target="_blank" rel="noopener">SARS: Retirement lump sum benefits</a></li>
+      <li><a href="https://www.sars.gov.za/wp-content/uploads/Ops/Guides/LAPD-IT-G03-Guide-on-the-calculation-of-the-tax-payable-on-lump-sum-benefits.pdf" target="_blank" rel="noopener">SARS: Guide on the Calculation of the Tax Payable on Lump Sum Benefits</a></li>
+      <li><a href="https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/" target="_blank" rel="noopener">SARS: Rates of Tax for Individuals 2026/27</a></li>
+    </ul>
+  </section>
+
+  <section class="card"><h2>4. Sample Calculations (Independent Verification)</h2>
+    <details><summary>View Sample Calculations</summary>
+      <ul style="margin:0;padding-left:20px;display:grid;gap:12px;font-size:14.5px">
+        <li><b>Withdrawal R100,000 (no history):</b> Taxable = R100,000. Bracket: 18% above R27,500. Tax = (100,000 - 27,500) × 18% = R13,050. Net = R86,950.</li>
+        <li><b>Retirement R770,000 (no history):</b> Taxable = R770,000. Top of 0% band is R550,000. Tax = (770,000 - 550,000) × 18% = R39,600. Net = R730,400.</li>
+        <li><b>Pre-1998 Public Sector R1,000,000 (30 total years, 20 post-1998):</b> Taxable = (20/30) × 1,000,000 = R666,667. Tax-free = R333,333. Tax on R666,667 = (666,667 - 550,000) × 18% = R21,000. Net = R979,000.</li>
+        <li><b>Two-Pot R100,000 withdrawal (Income R300,000, Age 40):</b> Tax before = R40,572. Tax after (R400,000) = R66,572. Incremental tax = R26,000 (exactly 26% as it stays in the same bracket). Net = R74,000.</li>
+      </ul>
+    </details>
+  </section>
+
+  <section class="card"><h2>5. Assumptions and Limitations</h2>
+    <ul style="margin:0;padding-left:20px;display:grid;gap:6px">
+      <li>Only the 2026/27 tax year (1 March 2026 – 28 February 2027) is supported. Other dates are blocked to prevent inaccurate estimates.</li>
+      <li>The pre-1998 public sector calculation uses the standard SARS ratio formula. Complex transfers or purchased service may require a professional tax directive.</li>
+      <li>Two-Pot estimates calculate the final annual tax liability. The fund's actual withholding may differ, resulting in a refund or amount owed upon tax filing.</li>
+      <li>This tool does not replace a SARS lump sum tax directive. Always confirm cash limits and fund-specific rules with the retirement fund.</li>
+      <li>All calculations run locally in your browser. No financial data is transmitted or stored externally.</li>
+    </ul>
+  </section>`;
+}
+route();
+</script>
+</body>
+</html>
